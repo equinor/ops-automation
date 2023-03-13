@@ -1,0 +1,9 @@
+# See https://www.howtogeek.com/devops/how-to-set-up-gitignore-as-a-whitelist/ for more about using .gitignore as a whitelist.
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+*
+!.github
+!modules
+!scripts
+!.gitignore
+!README.MD
