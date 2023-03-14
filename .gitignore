@@ -4,12 +4,12 @@
 *
 !*/
 
-# track this files
+# Whitelist files
 !.gitignore
 !README.md
 !CODEOWNERS
 
-# whitelist everything in following maps
+# Whitelist everything in following maps
 !.github/
 !modules/
 !scripts/
