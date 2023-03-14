@@ -7,9 +7,9 @@
 # track this files
 !.gitignore
 !README.md
+!CODEOWNERS
 
 # whitelist everything in following maps
 !.github/
 !modules/
 !scripts/
-!CODEOWNERS
