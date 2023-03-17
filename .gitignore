@@ -13,7 +13,7 @@
 !CODEOWNERS
 
 # Whitelist maps
-!.github/
+!.github/*
 !modules/powershell/*
 !scripts/bash/*/*
 !scripts/powershell/*
