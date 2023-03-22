@@ -1,9 +1,48 @@
 # See https://www.howtogeek.com/devops/how-to-set-up-gitignore-as-a-whitelist/ for more about using .gitignore as a whitelist.
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Ignore all
 *
-!.github
-!modules
-!scripts
+
+# Enable whitelist function
+!*/
+
+# Whitelist files
 !.gitignore
-!README.MD
+!README.md
+!CODEOWNERS
+
+# Whitelist maps
+!.github/*
+!modules/powershell/*
+!scripts/bash/*/*
+!scripts/powershell/*
+
+# Ignore names
+*test*
+*temp*
+
+# Ignore executables
+*.exe
+*.msi
+*.appx
+*.msix
+*.bat
+
+# Ignore binaries and symbols
+*.pdb
+*.dll
+*.wixpdb
+
+# Ignore packages
+*.deb
+*.tar.gz
+*.zip
+*.rpm
+*.pkg
+*.nupkg
+*.AppImage
+
+# Ignore extensions
+*.log
+*.env
