@@ -19,7 +19,6 @@
 !scripts/powershell/*
 
 # Ignore names
-*testing*
 *test*
 *temporary*
 
