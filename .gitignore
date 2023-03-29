@@ -13,9 +13,10 @@
 !CODEOWNERS
 
 # Whitelist maps
+!.github/ISSUE_TEMPLATE/*
 !.github/*
 !modules/powershell/*
-!scripts/bash/*/*
+!scripts/bash/
 !scripts/powershell/*
 
 # Ignore names
