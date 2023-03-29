@@ -13,14 +13,14 @@
 !CODEOWNERS
 
 # Whitelist maps
-!.github/*
+!.github/*/*
 !modules/powershell/*
 !scripts/bash/*/*
 !scripts/powershell/*
 
 # Ignore names
 *test*
-*temp*
+*temporary*
 
 # Ignore executables
 *.exe
