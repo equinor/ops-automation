@@ -1,3 +1,3 @@
 # ops-automation
 
-Collection of Functions, Scripts and Modules.
+Collection of Functions, Scripts, Modules and templates
