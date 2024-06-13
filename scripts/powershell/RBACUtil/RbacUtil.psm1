@@ -54,6 +54,7 @@ function getRbacRolesConfig {
 }
 
 function Compare-RbacJson {
+  [OutputType([System.Object[]])]
   [CmdletBinding()]
   param(
     # Input file
@@ -65,7 +66,6 @@ function Compare-RbacJson {
     [string]
     $ConfigFile
   )
-  [OutputType[System.Object[]]]
   if (-not (Test-RbacJson -ConfigFile $ConfigFile)) {
     throw "Error! JSON not valid!"
   }
