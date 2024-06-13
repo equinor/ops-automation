@@ -3,8 +3,7 @@ function Test-RbacJson {
   param (
     [Parameter(
       Position = 1,
-      Mandatory = $true,
-      ValueFromPipeline = $false
+      Mandatory = $true
     )]
     [string]$ConfigFile
   )
@@ -35,8 +34,7 @@ function getRbacRolesConfig {
   param (
     [Parameter(
       Position = 1,
-      Mandatory = $true,
-      ValueFromPipeline = $false
+      Mandatory = $true
     )]
     [string]
     $ConfigFile
@@ -60,8 +58,7 @@ function Compare-RbacJson {
     # Input file
     [Parameter(
       Position = 1,
-      Mandatory = $true,
-      ValueFromPipeline = $false
+      Mandatory = $true
     )]
     [string]
     $ConfigFile
@@ -108,8 +105,7 @@ function Export-RbacJson {
     #Output file
     [Parameter(
       Position = 1,
-      Mandatory = $true,
-      ValueFromPipeline = $false
+      Mandatory = $true
     )]
     [string]$ConfigFile
   )
