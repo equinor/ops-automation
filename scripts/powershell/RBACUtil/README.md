@@ -24,10 +24,10 @@ PowerShell script which checks RBAC assignments for a given subscription.
 
 1. Configure role assignments in a file - Use `rbac.json` as template.
 
-1. Run script `rbac.ps1`:
+1. Run script `RBACUtil.ps1`:
 
     ```powershell
-    ./rbac.ps1 -configFile <configFile name> -Mode <Compare|ExportToJson|ImportFromJson>
+    ./RBACUtil.ps1 -configFile <configFile name> -Mode <Compare|ExportToJson|ImportFromJson>
     ```
 
 ## `Mode` switch
