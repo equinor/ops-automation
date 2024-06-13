@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RBAC",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "roleAssignments": {
+      "description": "A list of role assignments manage at the parent scope.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "DisplayName": {
+            "description": "",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ObjectId": {
+            "description": "",
+            "type": "string"
+          },
+          "RoleDefinitionName": {
+            "description": "",
+            "type": "string"
+          },
+          "RoleDefinitionId": {
+            "description": "",
+            "type": "string"
+          },
+          "Scope": {
+            "description": "",
+            "type": "string"
+          },
+          "Description": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "DisplayName",
+          "ObjectId",
+          "RoleDefinitionName",
+          "RoleDefinitionId",
+          "Scope"
+        ]
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "roleAssignments"
+  ]
+}
