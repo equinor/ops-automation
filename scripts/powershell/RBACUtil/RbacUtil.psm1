@@ -30,6 +30,29 @@ function Test-RbacJson {
   }
 }
 
+function getRbacRolesConfig {
+  [CmdletBinding()]
+  param (
+    [Parameter(
+      Position = 1,
+      Mandatory = $true,
+      ValueFromPipeline = $true
+    )]
+    [string]
+    $ConfigFile
+  )
+  end {
+    if (-not (Test-RbacJson -ConfigFile $ConfigFile)) {
+      throw "Error! JSON not valid!"
+    }
+    $configJson = Get-Content $ConfigFile -Raw
+    $config = ConvertFrom-Json -InputObject $configJson
+    $configRoleAssignments = $config.roleAssignments
+
+    return $configRoleAssignments
+  }
+}
+
 function Compare-RbacJson {
   [CmdletBinding()]
   param(
@@ -42,16 +65,13 @@ function Compare-RbacJson {
     [string]
     $ConfigFile
   )
-
   if (-not (Test-RbacJson -ConfigFile $ConfigFile)) {
     throw "Error! JSON not valid!"
   }
-  $configJson = Get-Content $ConfigFile -Raw
-  $config = ConvertFrom-Json -InputObject $configJson
   $subscriptionId = (Get-AzContext).Subscription.Id
   $parentScope = "/subscriptions/$subscriptionId"
 
-  $configRoleAssignments = $config.roleAssignments
+  $configRoleAssignments = getRbacRolesConfig -ConfigFile $ConfigFile
 
   # Get existing role assignments in Azure. Exclude CDC role assignments
   $azRoleAssignments = Get-AzRoleAssignment -Scope $parentScope | Where-Object { $_.scope -match "^$parentScope/*" -and $_.displayName -notlike "Defender for Containers provisioning*" }
@@ -96,12 +116,11 @@ function Export-RbacJson {
   if (-not (Test-RbacJson -ConfigFile $ConfigFile)) {
     throw "Error! JSON not valid!"
   }
-  $configJson = Get-Content $ConfigFile -Raw
-  $config = ConvertFrom-Json -InputObject $configJson
+  
   $subscriptionId = (Get-AzContext).Subscription.Id
   $parentScope = "/subscriptions/$subscriptionId"
 
-  $configRoleAssignments = $config.roleAssignments
+  $configRoleAssignments = getRbacRolesConfig -ConfigFile $ConfigFile
 
   # Get existing role assignments in Azure. Exclude CDC role assignments
   $azRoleAssignments = Get-AzRoleAssignment -Scope $parentScope | Where-Object { ($_.scope -match "^$parentScope/*") -and ($_.displayName -notlike "Defender for Containers provisioning*") }
