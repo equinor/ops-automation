@@ -65,6 +65,7 @@ function Compare-RbacJson {
     [string]
     $ConfigFile
   )
+  [OutputType[System.Object[]]]
   if (-not (Test-RbacJson -ConfigFile $ConfigFile)) {
     throw "Error! JSON not valid!"
   }
@@ -116,7 +117,7 @@ function Export-RbacJson {
   if (-not (Test-RbacJson -ConfigFile $ConfigFile)) {
     throw "Error! JSON not valid!"
   }
-  
+
   $subscriptionId = (Get-AzContext).Subscription.Id
   $parentScope = "/subscriptions/$subscriptionId"
 
