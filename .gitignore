@@ -14,7 +14,7 @@
 
 # Whitelist maps
 !.github/*/*
-!modules/powershell/*
+!modules/powershell/*/*
 !scripts/bash/*/*
 !scripts/powershell/*
 
