@@ -118,27 +118,30 @@ function Set-SubscriptionContext {
 
 # Temporarily disable Key Vault firewall to allow script to read secrets in Source Vault and write secrets in Target Vault.
 function Disable-KeyVaultFirewall {
+
     param (
         [Parameter(Mandatory = $true)]
         [string]$VaultName
     )
 
     $Vault = Get-AzKeyVault -VaultName $VaultName -ErrorAction SilentlyContinue
-    if ($Vault) {
-        $FirewallDefaultAction = $Vault.NetworkAcls.DefaultAction
-        $FirewallEnabled = $FirewallDefaultAction -eq 'Deny'
+    $FirewallDefaultAction = $Vault.NetworkAcls.DefaultAction
+    $FirewallEnabled = $FirewallDefaultAction -eq 'Deny'
 
-        if ($FirewallEnabled) {
-            Write-Output "Firewall is currently set to 'Deny' for $VaultName. Changing to 'Allow'."
-            $null = Update-AzKeyVaultNetworkRuleSet -VaultName $VaultName -DefaultAction 'Allow'
-        }
+    if ($FirewallEnabled) {
+        $null = Update-AzKeyVaultNetworkRuleSet -VaultName $VaultName -DefaultAction 'Allow'
+    }
 
-        return $FirewallEnabled
-    }
-    else {
-        Write-Error "Failed to get Key Vault information for $VaultName. Please check the vault name and try again."
-        exit 1
-    }
+    return $FirewallEnabled
+}
+
+# Convert SecureString to PlainText (Temporarily for comparison purposes)
+function Convert-SecureStringToPlainText {
+    param (
+        [Parameter(Mandatory = $true)]
+        [SecureString]$SecureString
+    )
+    return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString))
 }
 
 try {
@@ -175,22 +178,23 @@ try {
 
         foreach ($n in $SecretName) {
             # Get secret from source Key Vault
-            $SourceSecretValue = Get-AzKeyVaultSecret -VaultName $SourceVaultName -Name $n -AsPlainText -ErrorAction SilentlyContinue
             $SourceSecret = Get-AzKeyVaultSecret -VaultName $SourceVaultName -Name $n -ErrorAction SilentlyContinue
+            $SourceSecretValue = Convert-SecureStringToPlainText -secureString $SourceSecret.SecretValue
 
             # Set Target Subscription Context if available
             if ($TargetSubscriptionId) {
                 $null = Set-AzContext -SubscriptionId $TargetSubscriptionId
             }
 
-            # Compare Source and Target Secret Values
-            $TargetSecretValue = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $n -AsPlainText -ErrorAction SilentlyContinue
+            # Get target secret from target Key Vault
+            $TargetSecret = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $n -ErrorAction SilentlyContinue
+            $TargetSecretValue = Convert-SecureStringToPlainText -secureString $TargetSecret.SecretValue
 
+            # Compare Source and Target Secret Values
             if ($SourceSecretValue -ne $TargetSecretValue) {
-                $SecretValue = $SourceSecretValue | ConvertTo-SecureString -AsPlainText -Force
                 $Copy = Set-AzKeyVaultSecret `
                     -VaultName $TargetVaultName `
-                    -SecretValue $SecretValue `
+                    -SecretValue $SourceSecret.SecretValue `
                     -Name $SourceSecret.Name `
                     -Expires $SourceSecret.Expires `
                     -ContentType $SourceSecret.ContentType `
@@ -214,16 +218,18 @@ finally {
     # Void secrets
     $SourceSecretValue = ""
     $TargetSecretValue = ""
-    $SecretValue = ""
 
-    # Revert firewall settings if changed
+    # Switch Source Vault Firewall back to Deny if default action was 'Deny'
     if ($SourceVaultFirewall) {
-        Write-Output "Reverting firewall settings for Source Vault to 'Deny'."
         $null = Update-AzKeyVaultNetworkRuleSet -VaultName $SourceVaultName -DefaultAction 'Deny'
+
+        Write-Output "Firewall for Source Vault is set to $SourceVaultFirewall."
     }
 
+    # Switch Target Vault Firewall back to Deny if default action was 'Deny'
     if ($TargetVaultFirewall) {
-        Write-Output "Reverting firewall settings for Target Vault to 'Deny'."
         $null = Update-AzKeyVaultNetworkRuleSet -VaultName $TargetVaultName -DefaultAction 'Deny'
+
+        Write-Output "Firewall for Target Vault is set to $SourceVaultFirewall."
     }
 }
