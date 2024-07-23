@@ -93,7 +93,7 @@ function aaLogin {
 }
 
 # Set and verify Azure Subscription Context
-function Set-Subscription {
+function Select-SubscriptionContext {
 
     param (
         [Parameter(Mandatory = $true)]
@@ -150,7 +150,7 @@ try {
     }
 
     # Set Context and make sure FireWall is set to "Allowed" to be able to access secrets
-    Set-Subscription -SubscriptionId $SubscriptionId
+    Select-SubscriptionContext -SubscriptionId $SubscriptionId
     $SourceVaultFirewall = Disable-KeyVaultFirewall -VaultName $SourceVaultName
     $TargetVaultFirewall = Disable-KeyVaultFirewall -VaultName $TargetVaultName
 
