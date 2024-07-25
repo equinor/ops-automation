@@ -135,15 +135,6 @@ function Disable-KeyVaultFirewall {
     return $FirewallEnabled
 }
 
-# Convert SecureString to PlainText (Temporarily for comparison purposes)
-function Convert-SecureStringToPlainText {
-    param (
-        [Parameter(Mandatory = $true)]
-        [SecureString]$SecureString
-    )
-    return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString))
-}
-
 try {
     if ($Runbook) {
         aaLogin
@@ -178,28 +169,29 @@ try {
 
         foreach ($n in $SecretName) {
             # Get secret from source Key Vault
+            $SourceSecretValue = Get-AzKeyVaultSecret -VaultName $SourceVaultName -Name $n -AsPlainText -ErrorAction SilentlyContinue
             $SourceSecret = Get-AzKeyVaultSecret -VaultName $SourceVaultName -Name $n -ErrorAction SilentlyContinue
-            $SourceSecretValue = Convert-SecureStringToPlainText -secureString $SourceSecret.SecretValue
 
             # Set Target Subscription Context if available
             if ($TargetSubscriptionId) {
                 $null = Set-AzContext -SubscriptionId $TargetSubscriptionId
             }
 
-            # Get target secret from target Key Vault
-            $TargetSecret = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $n -ErrorAction SilentlyContinue
-            $TargetSecretValue = Convert-SecureStringToPlainText -secureString $TargetSecret.SecretValue
+            # Get target secret from target Key Vault as plaintext for comparison
+            $TargetSecretValue = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $n -AsPlainText -ErrorAction SilentlyContinue
 
             # Compare Source and Target Secret Values
             if ($SourceSecretValue -ne $TargetSecretValue) {
+                $SecretValue = $SourceSecretValue | ConvertTo-SecureString -AsPlainText -Force
                 $Copy = Set-AzKeyVaultSecret `
                     -VaultName $TargetVaultName `
-                    -SecretValue $SourceSecret.SecretValue `
+                    -SecretValue $SecretValue `
                     -Name $SourceSecret.Name `
                     -Expires $SourceSecret.Expires `
                     -ContentType $SourceSecret.ContentType `
                     -Tag $SourceSecret.Tags `
                     -Confirm:(!$Force)
+
                 Write-Output "Successfully copied secret name '$($Copy.Name)' with id '$($Copy.Id)'"
             }
 
@@ -218,6 +210,7 @@ finally {
     # Void secrets
     $SourceSecretValue = ""
     $TargetSecretValue = ""
+    $SecretValue = ""
 
     # Switch Source Vault Firewall back to Deny if default action was 'Deny'
     if ($SourceVaultFirewall) {
