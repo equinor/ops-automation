@@ -17,6 +17,7 @@
 !modules/powershell/*
 !scripts/bash/*/*
 !scripts/powershell/*
+!scripts/powershell/RBACUtil/*
 
 # Ignore names
 *test*
