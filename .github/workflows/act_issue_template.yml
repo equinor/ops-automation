@@ -1,6 +1,9 @@
 name: ACT issue templates
 
 on:
+  schedule:
+    - cron: '04 05 * * 1-5'
+
   workflow_dispatch:
 
   issues:
@@ -8,17 +11,10 @@ on:
       - opened
 
 jobs:
-  manual_templates_update:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
-    name: manual_templates_update
+  act_issue_templates:
     uses: equinor/ops-py/.github/workflows/act_issue_templates.yml@main
     with:
+      environment: act-templates
       team_alias: act
-      use_remote: true
-
-  issue_create:
-    if: ${{ github.event_name == 'issues' }}
-    name: issue_create
-    uses: equinor/ops-py/.github/workflows/act_issue_templates.yml@main
-    with:
-      team_alias: act
+    secrets:
+      SSH_DEPLOY_KEY: ${{ secrets.SSH_DEPLOY_KEY }}
