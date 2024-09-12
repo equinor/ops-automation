@@ -1,9 +1,6 @@
 name: ACT issue templates
 
 on:
-  schedule:
-    - cron: '04 05 * * 1-5'
-
   workflow_dispatch:
 
   issues:
