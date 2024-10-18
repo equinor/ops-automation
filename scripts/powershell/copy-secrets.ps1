@@ -2,6 +2,7 @@ param (
   [Parameter(Mandatory = $true)]
   [string]$SourceSubscriptionId,
 
+  # # Assume same subscription for now
   # [Parameter(Mandatory = $false)]
   # [string]$TargetSubscriptionId,
 
@@ -19,7 +20,7 @@ $IpAddress = (Invoke-RestMethod -Uri "https://api.ipify.org")
 $IpAddressRange = "$IpAddress/32"
 Write-Information "Current IP address: $IpAddress"
 
-$Context = Set-AzContext -SubscriptionId $SourceSubscriptionId
+$Context = Set-AzContext -Subscription $SourceSubscriptionId
 Write-Information "Current subscription: $($Context.Subscription.Name)"
 
 $SourceVault = Get-AzKeyVault -VaultName $SourceVaultName
@@ -65,11 +66,21 @@ try {
   $TargetVaultSecrets = @()
   $TargetVaultSecrets += Get-AzKeyVaultSecret -VaultName $TargetVaultName
 
-  # # Compare secret name and value with existing. Add only if not exist (except if /1)
-  # $CompareSecretName = Compare-Object -ReferenceObject $SourceVaultSecrets -DifferenceObject $TargetVaultSecrets -Property Name
-  # # /1 - If secret name is the same, but value differs: overwrite secret value
-  # # if ($Force)
-
+  # Copy secrets
+  $SourceVaultSecrets | ForEach-Object {
+    # Get value of secret in plaintext to compare with target secret
+    $Secret = Get-AzKeyVaultSecret -VaultName $_.VaultName -Name $_.Name -AsPlainText # -ErrorAction SilentlyContinue
+    $Existing = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -AsPlainText # -ErrorAction SilentlyContinue
+    if ($Secret -ne $Existing) {
+        # Only copy if value of secret don't match target secret
+        $SecretValue = $Secret | ConvertTo-SecureString -AsPlainText -Force
+        $Backup = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -SecretValue $SecretValue
+        Write-Output "Successfully backed up secret '$($Backup.Id)'"
+    }
+    else {
+        Write-Output "Secret '$($_.Id)' already backed up"
+    }
+  }
 
 }
 catch {
