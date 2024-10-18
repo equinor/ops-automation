@@ -2,8 +2,8 @@ param (
   [Parameter(Mandatory = $true)]
   [string]$SourceSubscriptionId,
 
-  [Parameter(Mandatory = $false)]
-  [string]$TargetSubscriptionId,
+  # [Parameter(Mandatory = $false)]
+  # [string]$TargetSubscriptionId,
 
   [Parameter(Mandatory = $true)]
   [string]$SourceVaultName,
@@ -45,14 +45,16 @@ finally {
   }
 }
 
-# Conditional: Should not execute if $TargetSubscriptionId == $null
-#
-# Set az context to target sub
-$Context = Set-AzContext -SubscriptionId $TargetSubscriptionId
-Write-Information "Current subscription: $($Context.Subscription.Name)"
+# # Assume same subscription for now
+# #
+# # Conditional: Should not execute if $TargetSubscriptionId == $null
+# #
+# # Set az context to target sub
+# $Context = Set-AzContext -SubscriptionId $TargetSubscriptionId
+# Write-Information "Current subscription: $($Context.Subscription.Name)"
 
-$TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
-$AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
+# $TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
+# $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 try {
   # Add IP address to target Key vault
@@ -63,11 +65,12 @@ try {
   $TargetVaultSecrets = @()
   $TargetVaultSecrets += Get-AzKeyVaultSecret -VaultName $TargetVaultName
 
-  # Compare secret name and value with existing. Add only if not exist (except if /1)
-  $CompareSecretName = Compare-Object -ReferenceObject $SourceVaultSecrets -DifferenceObject $TargetVaultSecrets -Property Name
-  # /1 - If secret name is the same, but value differs: overwrite secret value
+  # # Compare secret name and value with existing. Add only if not exist (except if /1)
+  # $CompareSecretName = Compare-Object -ReferenceObject $SourceVaultSecrets -DifferenceObject $TargetVaultSecrets -Property Name
+  # # /1 - If secret name is the same, but value differs: overwrite secret value
+  # # if ($Force)
 
-  # if ($Force)
+
 }
 catch {
     # Generic error message. Look to improve
