@@ -62,9 +62,9 @@ try {
   $TargetVaultSecrets = @()
   $TargetVaultSecrets += Get-AzKeyVaultSecret -VaultName $TargetVaultName
 
-  # Compare secret name and value with existing. Add only if not exist
+  # Compare secret name and value with existing. Add only if not exist (except if /1)
   $CompareSecretName = Compare-Object -ReferenceObject $SourceVaultSecrets -DifferenceObject $TargetVaultSecrets -Property Name
-  # /1 - Hvis secret navn er likte men secret value er ulik --> overskriv secret value
+  # /1 - If secret name is the same, but value differs: overwrite secret value
 
   # if ($Force)
 }
