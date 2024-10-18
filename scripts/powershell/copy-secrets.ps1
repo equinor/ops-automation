@@ -26,11 +26,11 @@ $SourceVault = Get-AzKeyVault -VaultName $SourceVaultName
 $AddNetworkRule = $SourceVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 try {
-  # Legg til IP addresse på source key vault
+  # Add IP adderss to source Key vault
   if ($AddNetworkRule) {
     $null = Add-AzKeyVaultNetworkRule -VaultName $SourceVaultName -IpAddressRange $IpAddressRange
   }
-  # Hent secrets fra source key vault
+  # Get secrets from asource Key vault
   $SourceVaultSecrets = @()
   $SourceVaultSecrets += Get-AzKeyVaultSecret -VaultName $SourceVaultName
 }
@@ -38,14 +38,15 @@ catch {
   # skriv feilmeldingen
 }
 finally {
-  # Fjern IP addresse på source key vault
+  # Remove IP address from source Key vault
   if ($AddNetworkRule) {
     $null = Remove-AzKeyVaultNetworkRule -VaultName $SourceVaultName -IpAddressRange $IpAddressRange
   }
 }
 
-# Legg til: Hopp over hvis isje vi skal sammenligne med et annet subscription
-# Set az context til target sub
+# Conditional: Should not execute if $TargetSubscriptionId == $null
+#
+# Set az context to target sub
 $Context = Set-AzContext -SubscriptionId $TargetSubscriptionId
 Write-Information "Current subscription: $($Context.Subscription.Name)"
 
@@ -53,25 +54,25 @@ $TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
 $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 try {
-  # Legg til IP addresse på target key vault
+  # Add IP address to target Key vault
   if ($AddNetworkRule) {
     $null = Add-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
   }
-  # Legg secrets inn i target key vault
+  # Add secrets to target Key vault
   $TargetVaultSecrets = @()
   $TargetVaultSecrets += Get-AzKeyVaultSecret -VaultName $TargetVaultName
 
-  # Sammenlign secret navn og secret value --> Legg til hvis mangler + hopp over hvis finnes (unntatt hvis /1)
+  # Compare secret name and value with existing. Add only if not exist
   $CompareSecretName = Compare-Object -ReferenceObject $SourceVaultSecrets -DifferenceObject $TargetVaultSecrets -Property Name
   # /1 - Hvis secret navn er likte men secret value er ulik --> overskriv secret value
 
   # if ($Force)
 }
 catch {
-  # skriv feilmelding
+  # Error message
 }
 finally {
-  # Fjern IP addresse på target key vault
+  # Remove IP address from target Key vault
   if ($AddNetworkRule) {
     $null = Remove-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
   }
