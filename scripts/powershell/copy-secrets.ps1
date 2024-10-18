@@ -15,7 +15,7 @@ param (
   [switch]$Force
 )
 
-$IpAddress = Invoke-RestMethod "https://api.ipify.org"
+$IpAddress = (Invoke-RestMethod -Uri "https://api.ipify.org")
 $IpAddressRange = "$IpAddress/32"
 Write-Information "Current IP address: $IpAddress"
 
