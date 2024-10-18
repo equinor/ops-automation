@@ -10,11 +10,22 @@ param (
   [string]$SourceVaultName,
 
   [Parameter(Mandatory = $true)]
-  [string]$TargetVaultName,
+  [string]$TargetVaultName
 
-  [Parameter(Mandatory = $false)]
-  [switch]$Force
+  # # Use if we want to overwrite secrets that already exist
+  # [Parameter(Mandatory = $false)]
+  # [switch]$Force
 )
+
+# Write-Output "SourceSubscriptionId is: $SourceSubscriptionId"
+# Write-Output "SourceVaultName is: $SourceVaultName"
+# Write-Output "TargetVaultName is: $TargetVaultName"
+# exit
+
+# # TODO
+# - Expiration date should be copied together with secret
+# - Should allow copying across subscrptions
+# - Should be able to force overwrite if secrets already exist
 
 $IpAddress = (Invoke-RestMethod -Uri "https://api.ipify.org")
 $IpAddressRange = "$IpAddress/32"
@@ -54,8 +65,8 @@ finally {
 # $Context = Set-AzContext -SubscriptionId $TargetSubscriptionId
 # Write-Information "Current subscription: $($Context.Subscription.Name)"
 
-# $TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
-# $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
+$TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
+$AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 try {
   # Add IP address to target Key vault
