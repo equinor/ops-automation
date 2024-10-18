@@ -35,7 +35,8 @@ try {
   $SourceVaultSecrets += Get-AzKeyVaultSecret -VaultName $SourceVaultName
 }
 catch {
-  # skriv feilmeldingen
+  # Generic error message. Look to improve
+  Write-Error "An error occurred"
 }
 finally {
   # Remove IP address from source Key vault
@@ -69,7 +70,8 @@ try {
   # if ($Force)
 }
 catch {
-  # Error message
+    # Generic error message. Look to improve
+    Write-Error "An error occurred"
 }
 finally {
   # Remove IP address from target Key vault
