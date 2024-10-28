@@ -1,3 +1,41 @@
+<#
+  .SYNOPSIS
+  Copies key vault secrets to a target key vault.
+
+  Prerequisites for identity or service principal that will run this script:
+    - RBAC as Key Vault Contributor for Source and Destination Vault
+    - Read access policy for secrets at source Key Vault and Write access policy for secrets at destination Key Vault
+
+  .PARAMETER SourceSubscriptionId
+  Specifies the ID of source Azure Subscription.
+
+  .PARAMETER TargetSubscriptionId
+  Specifies the ID of target Azure Subscription.
+
+  .PARAMETER SourceVaultName
+  Specifies the name of the source key vault.
+
+  .PARAMETER TargetVaultName
+  Specifies the name of the target key vault.
+
+  .PARAMETER Force
+  Forces the script to copy regardless if secret exist in target Key vault.
+
+  .EXAMPLE
+  This example shows how to copy all secrets from source to target vault within the same subscription.
+  If secret exists in target Key vault, it will not be copied.
+  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String>
+
+  .EXAMPLE
+  Similar to example above, this shows how to copy all secrets from source to target vault within the same subscription.
+  Secret will be copied even if it already exists in target Key vault.
+  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String> -Force
+
+  .EXAMPLE
+  This example shows how to copy all secrets when vaults reside in different Azure Subscriptions:
+  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String> -TargetSubscriptionId <String>
+#>
+
 param (
   [Parameter(Mandatory = $true)]
   [string]$SourceSubscriptionId,
@@ -9,26 +47,12 @@ param (
   [string]$SourceVaultName,
 
   [Parameter(Mandatory = $true)]
-  [string]$TargetVaultName
+  [string]$TargetVaultName,
 
-  # # Use if we want to overwrite secrets that already exist
-  # [Parameter(Mandatory = $false)]
-  # [switch]$Force
+  # Forcefully overwrite exisiting secrets
+  [Parameter(Mandatory = $false)]
+  [switch]$Force
 )
-
-##################################################################
-###################### REMOVE AFTER TESTING ######################
-##################################################################
-Write-Output "SourceSubscriptionId is: $SourceSubscriptionId"
-Write-Output "TargetSubscriptionId is: $TargetSubscriptionId"
-Write-Output "SourceVaultName is: $SourceVaultName"
-Write-Output "TargetVaultName is: $TargetVaultName"
-Read-Host -Prompt "Press any key to continue or Ctrl-C to break..."
-
-# # TODO
-# √ - Expiration date should be copied together with secret
-# √ - Should allow copying across subscrptions
-#   - Should be able to force overwrite if secrets already exist
 
 $IpAddress = (Invoke-RestMethod -Uri "https://api.ipify.org")
 $IpAddressRange = "$IpAddress/32"
@@ -37,7 +61,7 @@ Write-Information "Current IP address: $IpAddress"
 $Context = Set-AzContext -Subscription $SourceSubscriptionId
 Write-Information "Current subscription: $($Context.Subscription.Name)"
 
-# $SourceVault = Get-AzKeyVault -VaultName $SourceVaultName
+$SourceVault = Get-AzKeyVault -VaultName $SourceVaultName
 $AddNetworkRule = $SourceVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 try {
@@ -68,7 +92,6 @@ finally {
 if (![string]::IsNullOrEmpty($TargetSubscriptionId)) {
   $Context = Set-AzContext -Subscription $TargetSubscriptionId
   Write-Information "Target subscription: $($Context.Subscription.Name)"
-  Start-Sleep -Seconds 10
 }
 
 $TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
@@ -82,18 +105,20 @@ try {
 
   # Copy secrets
   $SourceVaultSecrets | ForEach-Object {
-    $SourceVaultSecretName    = $($_.Name)
-    $SourceVaultSecretExpDate = $($_.Expires)
-    $TargetVaultSecretName    = (Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $SourceVaultSecretName).Name
+    $SourceVaultSecretName    = $($_.Name)    # Fetch secret name
+    $SourceVaultSecretExpDate = $($_.Expires) # Fetch expiration date
+    $TargetVaultSecret        = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $SourceVaultSecretName
     $SecretValue              = $($_.SecretValue)
 
     # Skip if secret exists in target vault
-    if ($SourceVaultSecretName -ne $TargetVaultSecretName) {
-      $Backup = (Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -Expires $SourceVaultSecretExpDate -SecretValue $SecretValue)
-      Write-Output "Successfully backed up secret '$($Backup.Id)'"
+    if ($TargetVaultSecret -eq $null -or $Force) {
+      # Secret does not exist
+      $Replicate = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -Expires $SourceVaultSecretExpDate -SecretValue $SecretValue
+      Write-Output "Successfully replicated secret '$($Replicate.Id)'"
     }
     else {
-      Write-Output "Secret '$($_.Id)' already backed up"
+      # Secret already exists
+      Write-Output "Secret '$($_.Id)' already replicated"
     }
   }
 }
