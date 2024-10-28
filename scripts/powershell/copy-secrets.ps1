@@ -7,33 +7,33 @@
     - Read access policy for secrets at source Key Vault and Write access policy for secrets at destination Key Vault
 
   .PARAMETER SourceSubscriptionId
-  Specifies the ID of source Azure Subscription.
+  Specifies the ID of source Azure Subscription. Mandatory.
 
   .PARAMETER TargetSubscriptionId
-  Specifies the ID of target Azure Subscription.
+  Specifies the ID of target Azure Subscription. Can be omitted.
 
   .PARAMETER SourceVaultName
-  Specifies the name of the source key vault.
+  Specifies the name of the source key vault. Mandatory.
 
   .PARAMETER TargetVaultName
-  Specifies the name of the target key vault.
+  Specifies the name of the target key vault. Mandatory.
 
   .PARAMETER Force
-  Forces the script to copy regardless if secret exist in target Key vault.
+  Forces the script to copy regardless if secret exist in target Key vault. Can be omitted.
 
   .EXAMPLE
   This example shows how to copy all secrets from source to target vault within the same subscription.
   If secret exists in target Key vault, it will not be copied.
-  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String>
+  .\Copy-AzKeyVaultSecret.ps1 -SourceSubscriptionId <String> -SourceVaultName <String> -TargetVaultName <String>
 
   .EXAMPLE
   Similar to example above, this shows how to copy all secrets from source to target vault within the same subscription.
-  Secret will be copied even if it already exists in target Key vault.
-  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String> -Force
+  Secret will be copied even if it already exist in target Key vault.
+  .\Copy-AzKeyVaultSecret.ps1 -SourceSubscriptionId <String> -SourceVaultName <String> -TargetVaultName <String> -Force
 
   .EXAMPLE
   This example shows how to copy all secrets when vaults reside in different Azure Subscriptions:
-  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String> -TargetSubscriptionId <String>
+  .\Copy-AzKeyVaultSecret.ps1 -SourceSubscriptionId <String> -TargetSubscriptionId <String> -SourceVaultName <String> -TargetVaultName <String>
 #>
 
 param (
@@ -49,7 +49,7 @@ param (
   [Parameter(Mandatory = $true)]
   [string]$TargetVaultName,
 
-  # Forcefully overwrite exisiting secrets
+  # Force overwrite existing secrets
   [Parameter(Mandatory = $false)]
   [switch]$Force
 )
@@ -84,7 +84,7 @@ catch {
 finally {
   # Remove IP address from source Key vault
   if ($AddNetworkRule) {
-    # $null = Remove-AzKeyVaultNetworkRule -VaultName $SourceVaultName -IpAddressRange $IpAddressRange
+    $null = Remove-AzKeyVaultNetworkRule -VaultName $SourceVaultName -IpAddressRange $IpAddressRange
   }
 }
 
@@ -113,12 +113,12 @@ try {
     # Skip if secret exists in target vault
     if ($TargetVaultSecret -eq $null -or $Force) {
       # Secret does not exist
-      $Replicate = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -Expires $SourceVaultSecretExpDate -SecretValue $SecretValue
-      Write-Output "Successfully replicated secret '$($Replicate.Id)'"
+      $Copy = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -Expires $SourceVaultSecretExpDate -SecretValue $SecretValue
+      Write-Output "Successfully replicated secret '$($Copy.Id)'"
     }
     else {
       # Secret already exists
-      Write-Output "Secret '$($_.Id)' already replicated"
+      Write-Output "Secret '$($_.Id)' already copied"
     }
   }
 }
@@ -128,6 +128,6 @@ catch {
 finally {
   # Remove IP address from target Key vault
   if ($AddNetworkRule) {
-    # $null = Remove-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
+    $null = Remove-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
   }
 }
