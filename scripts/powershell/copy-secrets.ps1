@@ -105,13 +105,14 @@ try {
 
   # Copy secrets
   $SourceVaultSecrets | ForEach-Object {
-    $SourceVaultSecretName    = $($_.Name)    # Fetch secret name
-    $SourceVaultSecretExpDate = $($_.Expires) # Fetch expiration date
-    $TargetVaultSecret        = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $SourceVaultSecretName
-    $SecretValue              = $($_.SecretValue)
+    $SourceVaultSecretName = $($_.Name)    # Fetch secret name
+    $TargetVaultSecret     = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $SourceVaultSecretName
 
     # Skip if secret exists in target vault
     if ($TargetVaultSecret -eq $null -or $Force) {
+      $SourceVaultSecretExpDate = $($_.Expires) # Fetch expiration date
+      $SecretValue              = $($_.SecretValue)
+
       # Secret does not exist
       $Copy = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -Expires $SourceVaultSecretExpDate -SecretValue $SecretValue
       Write-Output "Successfully replicated secret '$($Copy.Id)'"
