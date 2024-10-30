@@ -88,8 +88,8 @@ finally {
   }
 }
 
-# Switch context to target subscription if $TargetSubscriptionId has value
-if (![string]::IsNullOrEmpty($TargetSubscriptionId)) {
+# If a separate target subscription has been specified, switch context
+if ($TargetSubscriptionId -ne $SourceSubscriptionId) {
   $Context = Set-AzContext -Subscription $TargetSubscriptionId
   Write-Information "Target subscription: $($Context.Subscription.Name)"
 }
