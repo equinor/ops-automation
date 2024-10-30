@@ -41,7 +41,7 @@ param (
   [string]$SourceSubscriptionId,
 
   [Parameter(Mandatory = $false)]
-  [string]$TargetSubscriptionId,
+  [string]$TargetSubscriptionId = $SourceSubscriptionId,
 
   [Parameter(Mandatory = $true)]
   [string]$SourceVaultName,
