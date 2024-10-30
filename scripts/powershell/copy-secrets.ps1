@@ -65,12 +65,12 @@ $SourceVault = Get-AzKeyVault -VaultName $SourceVaultName
 $AddNetworkRule = $SourceVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 try {
-  # Add IP adderss to source Key vault
   if ($AddNetworkRule) {
+    write-information: "Add IP address to source Key vault"
     $null = Add-AzKeyVaultNetworkRule -VaultName $SourceVaultName -IpAddressRange $IpAddressRange
   }
 
-  # Get list of secrets names
+  Write-Information: "Get list of secrets names"
   $SourceVaultSecretNames = (Get-AzKeyVaultSecret -VaultName $SourceVaultName).Name
 
   $SourceVaultSecrets = @()
@@ -79,16 +79,16 @@ try {
   }
 }
 catch {
-  Write-Error "An error occurred: $_"
+  Write-Error "An error occurred: $($_.ErrorDetails)"
 }
 finally {
-  # Remove IP address from source Key vault
   if ($AddNetworkRule) {
+    Write-Information: "Remove IP address from source Key vault"
     $null = Remove-AzKeyVaultNetworkRule -VaultName $SourceVaultName -IpAddressRange $IpAddressRange
   }
 }
 
-# If a separate target subscription has been specified, switch context
+Write-Information "If target subscription is specified, switch context"
 if ($TargetSubscriptionId -ne $SourceSubscriptionId) {
   $Context = Set-AzContext -Subscription $TargetSubscriptionId
   Write-Information "Target subscription: $($Context.Subscription.Name)"
@@ -98,37 +98,37 @@ $TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
 $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 try {
-  # Add IP address to target Key vault
   if ($AddNetworkRule) {
+    Write-Information "Add IP address to target Key vault"
     $null = Add-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
   }
 
-  # Copy secrets
+  # Copy secrets to target vault
   $SourceVaultSecrets | ForEach-Object {
-    $SourceVaultSecretName = $($_.Name)    # Fetch secret name
-    $TargetVaultSecret     = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $SourceVaultSecretName
+    $TargetVaultSecretName = $_.Name
+    $TargetVaultSecret     = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetVaultSecretName
 
-    # Skip if secret exists in target vault
+    # Skip if secret exist in target vault
     if ($TargetVaultSecret -eq $null -or $Force) {
-      $SourceVaultSecretExpDate = $($_.Expires) # Fetch expiration date
-      $SecretValue              = $($_.SecretValue)
+      $TargetVaultSecretExpDate = $_.Expires
+      $SecretValue              = $_.SecretValue
 
-      # Secret does not exist
-      $Copy = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -Expires $SourceVaultSecretExpDate -SecretValue $SecretValue
-      Write-Output "Successfully replicated secret '$($Copy.Id)'"
+      # Add if secret does not exist, orparameter -Force is used
+      $Copy = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -Expires $TargetVaultSecretExpDate -SecretValue $SecretValue
+      Write-Information "Successfully replicated secret '$($Copy.Id)' "
     }
     else {
       # Secret already exists
-      Write-Output "Secret '$($_.Id)' already copied"
+      Write-Information "Secret '$($_.Id)' already copied"
     }
   }
 }
 catch {
-    Write-Error "An error occurred $_"
+    Write-Error "An error occurred: $($_.ErrorDetails)"
 }
 finally {
-  # Remove IP address from target Key vault
   if ($AddNetworkRule) {
+    Write-Information "Remove IP address from target Key vault"
     $null = Remove-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
   }
 }
