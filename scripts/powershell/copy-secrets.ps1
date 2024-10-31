@@ -66,11 +66,11 @@ $AddNetworkRule = $SourceVault.NetworkAcls.IpAddressRanges -notcontains $IpAddre
 
 try {
   if ($AddNetworkRule) {
-    write-information: "Add IP address to source Key vault"
+    Write-Information "Add IP address to source Key vault"
     $null = Add-AzKeyVaultNetworkRule -VaultName $SourceVaultName -IpAddressRange $IpAddressRange
   }
 
-  Write-Information: "Get list of secrets names"
+  Write-Information "Get list of secrets names"
   $SourceVaultSecretNames = (Get-AzKeyVaultSecret -VaultName $SourceVaultName).Name
 
   $SourceVaultSecrets = @()
@@ -83,7 +83,7 @@ catch {
 }
 finally {
   if ($AddNetworkRule) {
-    Write-Information: "Remove IP address from source Key vault"
+    Write-Information "Remove IP address from source Key vault"
     $null = Remove-AzKeyVaultNetworkRule -VaultName $SourceVaultName -IpAddressRange $IpAddressRange
   }
 }
