@@ -88,13 +88,13 @@ finally {
   }
 }
 
-Write-Information "If target subscription is specified, switch context"
+Write-Information "If target subscription is specified, switch to target context"
 if ($TargetSubscriptionId -ne $SourceSubscriptionId) {
   $Context = Set-AzContext -Subscription $TargetSubscriptionId
   Write-Information "Target subscription: $($Context.Subscription.Name)"
 }
 
-$TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
+$TargetVault    = Get-AzKeyVault -VaultName $TargetVaultName
 $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 try {
