@@ -6,17 +6,17 @@
     - RBAC as Key Vault Contributor for Source and Destination Vault
     - Read access policy for secrets at source Key Vault and Write access policy for secrets at destination Key Vault
 
-  .PARAMETER SourceSubscriptionId
-  Specifies the ID of source Azure Subscription. Mandatory.
-
-  .PARAMETER TargetSubscriptionId
-  Specifies the ID of target Azure Subscription. Can be omitted.
-
   .PARAMETER SourceVaultName
   Specifies the name of the source key vault. Mandatory.
 
   .PARAMETER TargetVaultName
   Specifies the name of the target key vault. Mandatory.
+
+  .PARAMETER SubscriptionId
+  Specifies the ID of source Azure Subscription. Mandatory.
+
+  .PARAMETER TargetSubscriptionId
+  Specifies the ID of target Azure Subscription. Can be omitted.
 
   .PARAMETER Force
   Forces the script to copy regardless if secret exist in target Key vault. Can be omitted.
@@ -24,24 +24,24 @@
   .EXAMPLE
   This example shows how to copy all secrets from source to target vault within the same subscription.
   If secret exists in target Key vault, it will not be copied.
-  .\Copy-AzKeyVaultSecret.ps1 -SourceSubscriptionId <String> -SourceVaultName <String> -TargetVaultName <String>
+  .\Copy-AzKeyVaultSecret.ps1 -SubscriptionId <String> -SourceVaultName <String> -TargetVaultName <String>
 
   .EXAMPLE
   Similar to example above, this shows how to copy all secrets from source to target vault within the same subscription.
   Secret will be copied even if it already exist in target Key vault.
-  .\Copy-AzKeyVaultSecret.ps1 -SourceSubscriptionId <String> -SourceVaultName <String> -TargetVaultName <String> -Force
+  .\Copy-AzKeyVaultSecret.ps1 -SubscriptionId <String> -SourceVaultName <String> -TargetVaultName <String> -Force
 
   .EXAMPLE
   This example shows how to copy all secrets when vaults reside in different Azure Subscriptions:
-  .\Copy-AzKeyVaultSecret.ps1 -SourceSubscriptionId <String> -TargetSubscriptionId <String> -SourceVaultName <String> -TargetVaultName <String>
+  .\Copy-AzKeyVaultSecret.ps1 -SubscriptionId <String> -TargetSubscriptionId <String> -SourceVaultName <String> -TargetVaultName <String>
 #>
 
 param (
   [Parameter(Mandatory = $true)]
-  [string]$SourceSubscriptionId,
+  [string]$SubscriptionId,
 
   [Parameter(Mandatory = $false)]
-  [string]$TargetSubscriptionId = $SourceSubscriptionId,
+  [string]$TargetSubscriptionId = $SubscriptionId,
 
   [Parameter(Mandatory = $true)]
   [string]$SourceVaultName,
@@ -58,7 +58,7 @@ $IpAddress = (Invoke-RestMethod -Uri "https://api.ipify.org")
 $IpAddressRange = "$IpAddress/32"
 Write-Information "Current IP address: $IpAddress"
 
-$Context = Set-AzContext -Subscription $SourceSubscriptionId
+$Context = Set-AzContext -Subscription $SubscriptionId
 Write-Information "Current subscription: $($Context.Subscription.Name)"
 
 $SourceVault = Get-AzKeyVault -VaultName $SourceVaultName
@@ -89,7 +89,7 @@ finally {
 }
 
 Write-Information "If target subscription is specified, switch to target context"
-if ($TargetSubscriptionId -ne $SourceSubscriptionId) {
+if ($TargetSubscriptionId -ne $SubscriptionId) {
   $Context = Set-AzContext -Subscription $TargetSubscriptionId
   Write-Information "Target subscription: $($Context.Subscription.Name)"
 }
