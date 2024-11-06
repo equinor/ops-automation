@@ -18,6 +18,9 @@
   .PARAMETER TargetSubscriptionId
   Specifies the ID of target Azure Subscription.
 
+  .PARAMETER SecretName
+  Specifies the name of the secret to copy. You can as well specify multiple SecretNames for multiple secrets to copy.
+
   .PARAMETER Force
   Forces the script to copy regardless if secret exist in target Key vault.
 
@@ -48,6 +51,9 @@ param (
 
   [Parameter(Mandatory = $true)]
   [string]$TargetVaultName,
+
+  [Parameter(Mandatory = $false)]
+  [string[]]$SecretName,
 
   # Force overwrite existing secrets
   [Parameter(Mandatory = $false)]
@@ -88,13 +94,17 @@ finally {
   }
 }
 
+if ($SecretName.Count -gt 0) {
+  $SourceVaultSecrets = $SourceVaultSecrets | Where-Object { $_.Name -in $SecretName }
+}
+
 Write-Information "If target subscription is specified, switch to target context"
 if ($TargetSubscriptionId -ne $SubscriptionId) {
   $Context = Set-AzContext -Subscription $TargetSubscriptionId
   Write-Information "Target subscription: $($Context.Subscription.Name)"
 }
 
-$TargetVault    = Get-AzKeyVault -VaultName $TargetVaultName
+$TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
 $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 try {
@@ -106,12 +116,12 @@ try {
   # Copy secrets to target vault
   $SourceVaultSecrets | ForEach-Object {
     $TargetVaultSecretName = $_.Name
-    $TargetVaultSecret     = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetVaultSecretName
+    $TargetVaultSecret = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetVaultSecretName
 
     # Skip if secret exist in target vault
     if ($TargetVaultSecret -eq $null -or $Force) {
       $TargetVaultSecretExpDate = $_.Expires
-      $SecretValue              = $_.SecretValue
+      $SecretValue = $_.SecretValue
 
       # Add if secret does not exist, orparameter -Force is used
       $Copy = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $_.Name -Expires $TargetVaultSecretExpDate -SecretValue $SecretValue
@@ -124,7 +134,7 @@ try {
   }
 }
 catch {
-    Write-Error "An error occurred: $($_.ErrorDetails)"
+  Write-Error "An error occurred: $($_.ErrorDetails)"
 }
 finally {
   if ($AddNetworkRule) {
