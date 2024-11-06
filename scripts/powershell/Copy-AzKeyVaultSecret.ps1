@@ -7,19 +7,19 @@
     - Read access policy for secrets at source Key Vault and Write access policy for secrets at destination Key Vault
 
   .PARAMETER SourceVaultName
-  Specifies the name of the source key vault. Mandatory.
+  Specifies the name of the source key vault.
 
   .PARAMETER TargetVaultName
-  Specifies the name of the target key vault. Mandatory.
+  Specifies the name of the target key vault.
 
   .PARAMETER SubscriptionId
-  Specifies the ID of source Azure Subscription. Mandatory.
+  Specifies the ID of source Azure Subscription.
 
   .PARAMETER TargetSubscriptionId
-  Specifies the ID of target Azure Subscription. Can be omitted.
+  Specifies the ID of target Azure Subscription.
 
   .PARAMETER Force
-  Forces the script to copy regardless if secret exist in target Key vault. Can be omitted.
+  Forces the script to copy regardless if secret exist in target Key vault.
 
   .EXAMPLE
   This example shows how to copy all secrets from source to target vault within the same subscription.
