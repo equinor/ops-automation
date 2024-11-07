@@ -95,6 +95,7 @@ finally {
 }
 
 if ($SecretName.Count -gt 0) {
+  Write-Information "Filtering to target secrets of specified names"
   $SourceVaultSecrets = $SourceVaultSecrets | Where-Object { $_.Name -in $SecretName }
 }
 
