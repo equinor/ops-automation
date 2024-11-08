@@ -3,7 +3,8 @@
   Copies Key Vault secrets to a target Key Vault.
 
   .DESCRIPTION
-  TODO(@hknutsen): write a description.
+  The Copy-AzKeyVaultSecret.ps1 script wraps the Get-AzKeyVaultSecret and Set-AzKeyVaultSecret cmdlets to simplify the process of copying Key Vault secrets to a target Key Vault.
+  It will automatically check for and skip existing secrets in the target Key Vault.
 
   Prerequisites:
     - Azure roles "Key Vault Contributor" and "Key Vault Secrets User" at the Key Vault scope.
@@ -16,15 +17,13 @@
   The name of the target Key Vault to copy secrets to.
 
   .PARAMETER SubscriptionId
-  The ID of the subscription to copy secrets from.
-  Required for cross-subscription copy.
+  The ID of the subscription to copy Key Vault secrets from.
 
   .PARAMETER TargetSubscriptionId
-  The ID of the subscription to copy secrets to.
-  Required for cross-subscription copy.
+  The ID of the subscription to copy Key Vault secrets to.
 
   .PARAMETER Name
-  The name of the secret to copy.
+  The name of the Key Vault secrets to copy.
   If not specified, all secrets will be copied.
 
   .PARAMETER Force
