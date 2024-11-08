@@ -1,29 +1,34 @@
 <#
   .SYNOPSIS
-  Copies key vault secrets to a target key vault.
+  Copies Key Vault secrets to a target Key Vault.
 
-  Prerequisites for identity or service principal that will run this script:
-    - RBAC as Key Vault Contributor for Source and Destination Vault
-    - Read access policy for secrets at source Key Vault and Write access policy for secrets at destination Key Vault
+  .DESCRIPTION
+  TODO(@hknutsen): write a description.
+
+  Prerequisites:
+    - Azure roles "Key Vault Contributor" and "Key Vault Secrets User" at the Key Vault scope.
+    - Azure roles "Key Vault Contributor" and "Key Vault Secrets Officer" at the target Key Vault scope.
 
   .PARAMETER VaultName
-  Specifies the name of the source key vault.
+  The name of the Key Vault to copy secrets from.
 
   .PARAMETER TargetVaultName
-  Specifies the name of the target key vault.
+  The name of the target Key Vault to copy secrets to.
 
   .PARAMETER SubscriptionId
-  Specifies the ID of source Azure Subscription.
+  The ID of the subscription to copy secrets from.
+  Required for cross-subscription copy.
 
   .PARAMETER TargetSubscriptionId
-  Specifies the ID of target Azure Subscription.
+  The ID of the subscription to copy secrets to.
+  Required for cross-subscription copy.
 
   .PARAMETER Name
-  Specifies the name of the secret to copy. You can as well specify multiple names for multiple secrets to copy.
-  Filters all secrets to the secrets of the specified names.
+  The name of the secret to copy.
+  If not specified, all secrets will be copied.
 
   .PARAMETER Force
-  Forces the script to copy regardless if secret exist in target Key vault.
+  Override existing secrets in target Key Vault.
 
   .EXAMPLE
   This example shows how to copy all secrets from source to target vault within the same subscription.
@@ -50,19 +55,19 @@ param (
   [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
   [string]$TargetVaultName,
 
+  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
+  [string]$SubscriptionId,
+
+  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
+  [string]$TargetSubscriptionId,
+
   [Parameter(Mandatory = $false, ParameterSetName = "SingleSubscription")]
   [Parameter(Mandatory = $false, ParameterSetName = "CrossSubscription")]
   [string[]]$Name,
 
   [Parameter(Mandatory = $false, ParameterSetName = "SingleSubscription")]
   [Parameter(Mandatory = $false, ParameterSetName = "CrossSubscription")]
-  [switch]$Force,
-
-  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
-  [string]$SubscriptionId,
-
-  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
-  [string]$TargetSubscriptionId
+  [switch]$Force
 )
 
 $CrossSubscription = $PSCmdlet.ParameterSetName -eq "CrossSubscription"
