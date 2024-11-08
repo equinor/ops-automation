@@ -30,18 +30,16 @@
   Override existing secrets in target Key Vault.
 
   .EXAMPLE
-  This example shows how to copy all secrets from source to target vault within the same subscription.
-  If secret exists in target Key vault, it will not be copied.
-  .\Copy-AzKeyVaultSecret.ps1 -SubscriptionId <String> -VaultName <String> -TargetVaultName <String>
+  .\Copy-AzKeyVaultSecret.ps1 -VaultName example-vault -TargetVaultName example-vault-02
 
   .EXAMPLE
-  Similar to example above, this shows how to copy all secrets from source to target vault within the same subscription.
-  Secret will be copied even if it already exist in target Key vault.
-  .\Copy-AzKeyVaultSecret.ps1 -SubscriptionId <String> -VaultName <String> -TargetVaultName <String> -Force
+  .\Copy-AzKeyVaultSecret.ps1 -VaultName example-vault -TargetVaultName example-vault-02 -Name storage--primary-connection-string, storage--secondary-connection-string
 
   .EXAMPLE
-  This example shows how to copy all secrets when vaults reside in different Azure Subscriptions:
-  .\Copy-AzKeyVaultSecret.ps1 -SubscriptionId <String> -TargetSubscriptionId <String> -VaultName <String> -TargetVaultName <String>
+  .\Copy-AzKeyVaultSecret.ps1 -VaultName example-vault -TargetVaultName example-vault-02 -Force
+
+  .EXAMPLE
+  .\Copy-AzKeyVaultSecret.ps1 -VaultName example-vault -TargetVaultName example-vault-02 -SubscriptionId a8aa6166-3ab2-463c-b9d2-b3b277a2b70a -TargetSubscriptionId f8785e9b-2e41-4ffa-b693-33808fb24d3e
 #>
 
 [CmdletBinding(DefaultParameterSetName = "SingleSubscription")]
