@@ -67,30 +67,34 @@ param (
   [switch]$Force
 )
 
-$CrossSubscription = $PSCmdlet.ParameterSetName -eq "CrossSubscription"
-if ($CrossSubscription) {
-  Write-Information "Setting Azure context"
-  $Context = Set-AzContext -SubscriptionId $SubscriptionId
-  $SubscriptionName = $Context.Subscription.Name
-  Write-Information "Subscription: $SubscriptionName ($SubscriptionId)"
+$VaultArguments = @{
+  VaultName = $VaultName
+}
+$TargetVaultArguments = @{
+  $VaultName = $TargetVaultName
+}
+if ($PSCmdlet.ParameterSetName -eq "CrossSubscription") {
+  $VaultArguments["SubscriptionId"] = $SubscriptionId
+  $TargetVaultArguments["SubscriptionId"] = $TargetSubscriptionId
 }
 
 $IpAddress = Invoke-RestMethod "https://api.ipify.org"
 $IpAddressRange = "$IpAddress/32"
 Write-Information "IP address: $IpAddress"
 
-$Vault = Get-AzKeyVault -VaultName $VaultName
+$Vault = Get-AzKeyVault @VaultArguments
 $AddNetworkRule = $Vault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 $Secrets = @()
 try {
   if ($AddNetworkRule) {
     Write-Information "Adding IP address range '$IpAddressRange' to Key Vault '$VaultName'"
-    $null = Add-AzKeyVaultNetworkRule -VaultName $VaultName -IpAddressRange $IpAddressRange
+    $null = $Vault | Add-AzKeyVaultNetworkRule -IpAddressRange $IpAddressRange
   }
 
   Write-Information "Getting secrets from Key Vault '$VaultName'"
-  (Get-AzKeyVaultSecret -VaultName $VaultName).Name | ForEach-Object {
-    $Secrets += (Get-AzKeyVaultSecret -VaultName $VaultName -Name $_)
+  # TODO(@hknutsen): explain why we need to run Get-AzKeyVaultSecret twice.
+  ($Vault | Get-AzKeyVaultSecret).Name | ForEach-Object {
+    $Secrets += $Vault | Get-AzKeyVaultSecret -Name $_
   }
 }
 catch {
@@ -100,7 +104,7 @@ catch {
 finally {
   if ($AddNetworkRule) {
     Write-Information "Removing IP address range '$IpAddressRange' from Key Vault '$VaultName'"
-    $null = Remove-AzKeyVaultNetworkRule -VaultName $VaultName -IpAddressRange $IpAddressRange
+    $null = $Vault | Remove-AzKeyVaultNetworkRule -IpAddressRange $IpAddressRange
   }
 }
 
@@ -109,30 +113,23 @@ if ($Name.Count -gt 0) {
   $Secrets = $Secrets | Where-Object { $_.Name -in $Name }
 }
 
-if ($CrossSubscription) {
-  Write-Information "Setting Azure context to target subscription"
-  $Context = Set-AzContext -SubscriptionId $TargetSubscriptionId
-  $SubscriptionName = $Context.Subscription.Name
-  Write-Information "Target subscription: $SubscriptionName ($SubscriptionId)"
-}
-
-$TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
+$TargetVault = Get-AzKeyVault @TargetVaultArguments
 $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 try {
   if ($AddNetworkRule) {
     Write-Information "Adding IP address range '$IpAddressRange' to target Key Vault '$TargetVaultName'"
-    $null = Add-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
+    $null = $TargetVault | Add-AzKeyVaultNetworkRule -IpAddressRange $IpAddressRange
   }
 
   foreach ($Secret in $Secrets) {
     $TargetName = $Secret.Name
-    $TargetSecret = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetName
+    $TargetSecret = $TargetVault | Get-AzKeyVaultSecret -Name $TargetName
 
     if ($null -eq $TargetSecret -or $Force) {
       Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
       $TargetExpires = $Secret.Expires
       $TargetSecretValue = $Secret.Value
-      $TargetSecret = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetName -Expires $TargetExpires -SecretValue $TargetSecretValue
+      $TargetSecret = $TargetVault | Set-AzKeyVaultSecret -Name $TargetName -Expires $TargetExpires -SecretValue $TargetSecretValue
     }
     else {
       Write-Information "Secret '$TargetName' already exists in target Key Vault '$TargetVaultName'"
@@ -146,6 +143,6 @@ catch {
 finally {
   if ($AddNetworkRule) {
     Write-Information "Removing IP address range '$IpAddressRange' from target Key Vault '$TargetVaultName'"
-    $null = Remove-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
+    $null = $TargetVault | Remove-AzKeyVaultNetworkRule -IpAddressRange $IpAddressRange
   }
 }
