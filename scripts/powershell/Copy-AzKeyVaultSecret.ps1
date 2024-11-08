@@ -67,21 +67,28 @@ param (
   [switch]$Force
 )
 
+Write-Information "Vault name: $VaultName"
 $VaultArguments = @{
   VaultName = $VaultName
 }
+
+Write-Information "Target vault name: $TargetVaultName"
 $TargetVaultArguments = @{
   $VaultName = $TargetVaultName
 }
+
 if ($PSCmdlet.ParameterSetName -eq "CrossSubscription") {
+  Write-Information "Subscription ID: $SubscriptionId"
   $VaultArguments["SubscriptionId"] = $SubscriptionId
+
+  Write-Information "Target subscription ID: $TargetSubscriptionId"
   $TargetVaultArguments["SubscriptionId"] = $TargetSubscriptionId
 }
 
 $IpAddress = Invoke-RestMethod "https://api.ipify.org"
-$IpAddressRange = "$IpAddress/32"
 Write-Information "IP address: $IpAddress"
 
+$IpAddressRange = "$IpAddress/32"
 $Vault = Get-AzKeyVault @VaultArguments
 $AddNetworkRule = $Vault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 $Secrets = @()
@@ -92,10 +99,9 @@ try {
   }
 
   Write-Information "Getting secrets from Key Vault '$VaultName'"
-  # TODO(@hknutsen): explain why we need to run Get-AzKeyVaultSecret twice.
-  ($Vault | Get-AzKeyVaultSecret).Name | ForEach-Object {
-    $Secrets += $Vault | Get-AzKeyVaultSecret -Name $_
-  }
+  # Using Get-AzKeyVaultSecret to get all secrets does not return secret values.
+  # Use Get-AzKeyVaultSecret to get all secret names, then use Get-AzKeyVaultSecret to get secret value for each secret name.
+  ($Vault | Get-AzKeyVaultSecret).Name | ForEach-Object { $Secrets += $Vault | Get-AzKeyVaultSecret -Name $_ }
 }
 catch {
   Write-Host "An error occurred:"
