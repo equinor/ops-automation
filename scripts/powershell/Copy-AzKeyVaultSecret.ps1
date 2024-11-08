@@ -64,20 +64,18 @@ param (
   [switch]$Force
 )
 
-$ErrorActionPreference = 'Stop'
-
 Write-Information "Vault name: $VaultName"
 Write-Information "Target vault name: $TargetVaultName"
+Write-Information "Subscription ID: $SubscriptionId"
+Write-Information "Target subscription ID: $TargetSubscriptionId"
 
 if ($SubscriptionId -ne "") {
-  $Context = Set-AzContext -SubscriptionId $SubscriptionId
+  Write-Information "Setting subscription to '$subscriptionId' for current context"
+  $null = Set-AzContext -SubscriptionId $SubscriptionId
 }
 else {
-  $Context = Get-AzContext
-  $SubscriptionId = $Context.Subscription.Id
+  $SubscriptionId = (Get-AzContext).Subscription.Id
 }
-$SubscriptionName = $Context.Subscription.Name
-Write-Information "Subscription: $SubscriptionName ($SubscriptionId)"
 
 $IpAddress = Invoke-RestMethod "https://api.ipify.org"
 Write-Information "IP address: $IpAddress"
@@ -118,11 +116,10 @@ if ($Name.Count -gt 0) {
   $Secrets = $Secrets | Where-Object { $_.Name -in $Name }
 }
 
-if ($TargetSubscriptionId -ne $SubscriptionId) {
-  $Context = Set-AzContext -SubscriptionId $TargetSubscriptionId
+if ($TargetSubscriptionId -ne "" -and $TargetSubscriptionId -ne $SubscriptionId) {
+  Write-Information "Setting subscription to '$TargetSubscriptionId' for current context"
+  $null = Set-AzContext -SubscriptionId $TargetSubscriptionId
 }
-$TargetSubscriptionName = $Context.Subscription.Name
-Write-Information "Target subscription: $TargetSubscriptionName ($TargetSubscriptionId)"
 
 $TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
 if ($null -eq $TargetVault) {
@@ -142,10 +139,9 @@ try {
     $TargetSecret = $TargetVault | Get-AzKeyVaultSecret -Name $TargetName
 
     if ($null -eq $TargetSecret -or $Force) {
+      Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
       $TargetExpires = $Secret.Expires
       $TargetSecretValue = $Secret.SecretValue
-
-      Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
       $TargetSecret = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetName -Expires $TargetExpires -SecretValue $TargetSecretValue
     }
     else {
