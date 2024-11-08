@@ -18,11 +18,11 @@
 
   .PARAMETER SubscriptionId
   The ID of the subscription to copy Key Vault secrets from.
-  If not specified...
+  If not specified, the ID of the subscription that has been set for the current Azure PowerShell context will be used.
 
   .PARAMETER TargetSubscriptionId
   The ID of the subscription to copy Key Vault secrets to.
-  If not specificed...
+  If not specified, the ID of the subscription to copy Key Vault secrets from will be used.
 
   .PARAMETER Name
   The name of the Key Vault secrets to copy.
