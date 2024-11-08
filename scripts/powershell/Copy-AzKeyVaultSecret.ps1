@@ -40,36 +40,38 @@
   .\Copy-AzKeyVaultSecret.ps1 -SubscriptionId <String> -TargetSubscriptionId <String> -VaultName <String> -TargetVaultName <String>
 #>
 
+[CmdletBinding(DefaultParameterSetName = "SingleSubscription")]
 param (
-  [Parameter(Mandatory = $true)]
+  [Parameter(Mandatory = $true, ParameterSetName = "SingleSubscription")]
+  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
   [string]$VaultName,
 
-  [Parameter(Mandatory = $true)]
+  [Parameter(Mandatory = $true, ParameterSetName = "SingleSubscription")]
+  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
   [string]$TargetVaultName,
 
-  [Parameter(Mandatory = $false)]
+  [Parameter(Mandatory = $false, ParameterSetName = "SingleSubscription")]
+  [Parameter(Mandatory = $false, ParameterSetName = "CrossSubscription")]
   [string[]]$Name,
 
-  [Parameter(Mandatory = $false)]
+  [Parameter(Mandatory = $false, ParameterSetName = "SingleSubscription")]
+  [Parameter(Mandatory = $false, ParameterSetName = "CrossSubscription")]
+  [switch]$Force,
+
+  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
   [string]$SubscriptionId,
 
-  [Parameter(Mandatory = $false)]
-  [string]$TargetSubscriptionId = $SubscriptionId,
-
-  [Parameter(Mandatory = $false)]
-  [switch]$Force
+  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
+  [string]$TargetSubscriptionId
 )
 
-if ($SubscriptionId -ne "") {
+$CrossSubscription = $PSCmdlet.ParameterSetName -eq "CrossSubscription"
+if ($CrossSubscription) {
   Write-Information "Setting Azure context"
   $Context = Set-AzContext -SubscriptionId $SubscriptionId
+  $SubscriptionName = $Context.Subscription.Name
+  Write-Information "Subscription: $SubscriptionName ($SubscriptionId)"
 }
-else {
-  Write-Information "Getting Azure context"
-  $Context = Get-AzContext
-}
-$SubscriptionName = $Context.Subscription.Name
-Write-Information "Subscription: $SubscriptionName ($SubscriptionId)"
 
 $IpAddress = Invoke-RestMethod "https://api.ipify.org"
 $IpAddressRange = "$IpAddress/32"
@@ -77,7 +79,6 @@ Write-Information "IP address: $IpAddress"
 
 $Vault = Get-AzKeyVault -VaultName $VaultName
 $AddNetworkRule = $Vault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
-
 $Secrets = @()
 try {
   if ($AddNetworkRule) {
@@ -102,12 +103,12 @@ finally {
 }
 
 if ($Name.Count -gt 0) {
-  Write-Information "Filtering all secrets from Key Vault '$VaultName' to the secrets of the specified names"
+  Write-Information "Filtering all secrets from Key Vault '$VaultName' to secrets of the specified names"
   $Secrets = $Secrets | Where-Object { $_.Name -in $Name }
 }
 
-if ($TargetSubscriptionId -ne $SubscriptionId) {
-  Write-Information "Setting Azure context"
+if ($CrossSubscription) {
+  Write-Information "Setting Azure context to target subscription"
   $Context = Set-AzContext -SubscriptionId $TargetSubscriptionId
   $SubscriptionName = $Context.Subscription.Name
   Write-Information "Target subscription: $SubscriptionName ($SubscriptionId)"
@@ -115,7 +116,6 @@ if ($TargetSubscriptionId -ne $SubscriptionId) {
 
 $TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
 $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
-
 try {
   if ($AddNetworkRule) {
     Write-Information "Adding IP address range '$IpAddressRange' to target Key Vault '$TargetVaultName'"
