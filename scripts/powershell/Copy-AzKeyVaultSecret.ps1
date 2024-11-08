@@ -18,8 +18,8 @@
   .PARAMETER TargetSubscriptionId
   Specifies the ID of target Azure Subscription.
 
-  .PARAMETER SecretName
-  Specifies the name of the secret to copy. You can as well specify multiple SecretNames for multiple secrets to copy.
+  .PARAMETER Name
+  Specifies the name of the secret to copy. You can as well specify multiple names for multiple secrets to copy.
   Filters all secrets to the secrets of the specified names.
 
   .PARAMETER Force
@@ -48,7 +48,7 @@ param (
   [string]$TargetVaultName,
 
   [Parameter(Mandatory = $false)]
-  [string[]]$SecretName,
+  [string[]]$Name,
 
   [Parameter(Mandatory = $false)]
   [string]$SubscriptionId,
@@ -79,7 +79,6 @@ $Vault = Get-AzKeyVault -VaultName $VaultName
 $AddNetworkRule = $Vault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 
 $Secrets = @()
-
 try {
   if ($AddNetworkRule) {
     Write-Information "Adding IP address range '$IpAddressRange' to Key Vault '$VaultName'"
@@ -102,9 +101,9 @@ finally {
   }
 }
 
-if ($SecretName.Count -gt 0) {
+if ($Name.Count -gt 0) {
   Write-Information "Filtering all secrets from Key Vault '$VaultName' to the secrets of the specified names"
-  $Secrets = $Secrets | Where-Object { $_.Name -in $SecretName }
+  $Secrets = $Secrets | Where-Object { $_.Name -in $Name }
 }
 
 if ($TargetSubscriptionId -ne $SubscriptionId) {
@@ -124,15 +123,17 @@ try {
   }
 
   foreach ($Secret in $Secrets) {
-    $TargetSecretName = $Secret.Name
-    $TargetSecret = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetSecretName
+    $TargetName = $Secret.Name
+    $TargetSecret = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetName
 
     if ($null -eq $TargetSecret -or $Force) {
-      Write-Information "Setting secret '$TargetSecretName' in target Key Vault '$TargetVaultName'"
-      $TargetSecret = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetSecretName -Expires $Secret.Expires -SecretValue $Secret.SecretValue
+      Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
+      $TargetExpires = $Secret.Expires
+      $TargetSecretValue = $Secret.Value
+      $TargetSecret = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetName -Expires $TargetExpires -SecretValue $TargetSecretValue
     }
     else {
-      Write-Information "Secret '$TargetSecretName' already exists in target Key Vault '$TargetVaultName'"
+      Write-Information "Secret '$TargetName' already exists in target Key Vault '$TargetVaultName'"
     }
   }
 }
