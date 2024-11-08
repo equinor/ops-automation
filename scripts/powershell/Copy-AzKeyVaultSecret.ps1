@@ -67,29 +67,25 @@ param (
   [switch]$Force
 )
 
+$ParameterSetName = $PSCmdlet.ParameterSetName
+Write-Information "Parameter set name: $ParameterSetName"
+
 Write-Information "Vault name: $VaultName"
-$VaultArguments = @{
-  VaultName = $VaultName
-}
-
 Write-Information "Target vault name: $TargetVaultName"
-$TargetVaultArguments = @{
-  VaultName = $TargetVaultName
-}
 
-if ($PSCmdlet.ParameterSetName -eq "CrossSubscription") {
+$CopyCrossSubscription = $ParameterSetName -eq "CrossSubscription"
+if ($CopyCrossSubscription) {
   Write-Information "Subscription ID: $SubscriptionId"
-  $VaultArguments["SubscriptionId"] = $SubscriptionId
-
-  Write-Information "Target subscription ID: $TargetSubscriptionId"
-  $TargetVaultArguments["SubscriptionId"] = $TargetSubscriptionId
+  $Context = Set-AzContext -SubscriptionId $SubscriptionId
+  $SubscriptionName = $Context.Subscription.Name
+  Write-Information "Subscription name: $SubscriptionName"
 }
 
 $IpAddress = Invoke-RestMethod "https://api.ipify.org"
 Write-Information "IP address: $IpAddress"
 
 $IpAddressRange = "$IpAddress/32"
-$Vault = Get-AzKeyVault @VaultArguments
+$Vault = Get-AzKeyVault -VaultName $VaultName
 $AddNetworkRule = $Vault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 $Secrets = @()
 try {
@@ -119,7 +115,14 @@ if ($Name.Count -gt 0) {
   $Secrets = $Secrets | Where-Object { $_.Name -in $Name }
 }
 
-$TargetVault = Get-AzKeyVault @TargetVaultArguments
+if ($CopyCrossSubscription) {
+  Write-Information "Target subscription ID: $TargetSubscriptionId"
+  $Context = Set-AzContext -SubscriptionId $TargetSubscriptionId
+  $TargetSubscriptionName = $Context.Subscription.Name
+  Write-Information "Target subscription name: $TargetSubscriptionName"
+}
+
+$TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
 $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 try {
   if ($AddNetworkRule) {
@@ -132,11 +135,11 @@ try {
     $TargetSecret = $TargetVault | Get-AzKeyVaultSecret -Name $TargetName
 
     if ($null -eq $TargetSecret -or $Force) {
-      Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
       $TargetExpires = $Secret.Expires
       $TargetSecretValue = $Secret.SecretValue
-      # TODO(@hknutsen): this is broken...
-      $TargetSecret = $TargetVault | Set-AzKeyVaultSecret -Name $TargetName -Expires $TargetExpires -SecretValue $TargetSecretValue
+
+      Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
+      $TargetSecret = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetName -Expires $TargetExpires -SecretValue $TargetSecretValue
     }
     else {
       Write-Information "Secret '$TargetName' already exists in target Key Vault '$TargetVaultName'"
