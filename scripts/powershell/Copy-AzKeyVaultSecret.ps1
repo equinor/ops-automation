@@ -18,9 +18,11 @@
 
   .PARAMETER SubscriptionId
   The ID of the subscription to copy Key Vault secrets from.
+  If not specified...
 
   .PARAMETER TargetSubscriptionId
   The ID of the subscription to copy Key Vault secrets to.
+  If not specificed...
 
   .PARAMETER Name
   The name of the Key Vault secrets to copy.
@@ -42,50 +44,51 @@
   .\Copy-AzKeyVaultSecret.ps1 -VaultName example-vault -TargetVaultName example-vault-02 -SubscriptionId a8aa6166-3ab2-463c-b9d2-b3b277a2b70a -TargetSubscriptionId f8785e9b-2e41-4ffa-b693-33808fb24d3e
 #>
 
-[CmdletBinding(DefaultParameterSetName = "SingleSubscription")]
 param (
-  [Parameter(Mandatory = $true, ParameterSetName = "SingleSubscription")]
-  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
+  [Parameter(Mandatory = $true)]
   [string]$VaultName,
 
-  [Parameter(Mandatory = $true, ParameterSetName = "SingleSubscription")]
-  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
+  [Parameter(Mandatory = $true)]
   [string]$TargetVaultName,
 
-  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
+  [Parameter(Mandatory = $false)]
   [string]$SubscriptionId,
 
-  [Parameter(Mandatory = $true, ParameterSetName = "CrossSubscription")]
-  [string]$TargetSubscriptionId,
+  [Parameter(Mandatory = $false)]
+  [string]$TargetSubscriptionId = $SubscriptionId,
 
-  [Parameter(Mandatory = $false, ParameterSetName = "SingleSubscription")]
-  [Parameter(Mandatory = $false, ParameterSetName = "CrossSubscription")]
+  [Parameter(Mandatory = $false)]
   [string[]]$Name,
 
-  [Parameter(Mandatory = $false, ParameterSetName = "SingleSubscription")]
-  [Parameter(Mandatory = $false, ParameterSetName = "CrossSubscription")]
+  [Parameter(Mandatory = $false)]
   [switch]$Force
 )
 
-$ParameterSetName = $PSCmdlet.ParameterSetName
-Write-Information "Parameter set name: $ParameterSetName"
+$ErrorActionPreference = 'Stop'
 
 Write-Information "Vault name: $VaultName"
 Write-Information "Target vault name: $TargetVaultName"
 
-$CopyCrossSubscription = $ParameterSetName -eq "CrossSubscription"
-if ($CopyCrossSubscription) {
-  Write-Information "Subscription ID: $SubscriptionId"
+if ($SubscriptionId -ne "") {
   $Context = Set-AzContext -SubscriptionId $SubscriptionId
-  $SubscriptionName = $Context.Subscription.Name
-  Write-Information "Subscription name: $SubscriptionName"
 }
+else {
+  $Context = Get-AzContext
+  $SubscriptionId = $Context.Subscription.Id
+}
+$SubscriptionName = $Context.Subscription.Name
+Write-Information "Subscription: $SubscriptionName ($SubscriptionId)"
 
 $IpAddress = Invoke-RestMethod "https://api.ipify.org"
 Write-Information "IP address: $IpAddress"
 
 $IpAddressRange = "$IpAddress/32"
 $Vault = Get-AzKeyVault -VaultName $VaultName
+if ($null -eq $Vault) {
+  Write-Host "Key Vault '$VaultName' does not exist in subscription '$SubscriptionName'"
+  exit 1
+}
+
 $AddNetworkRule = $Vault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 $Secrets = @()
 try {
@@ -115,14 +118,18 @@ if ($Name.Count -gt 0) {
   $Secrets = $Secrets | Where-Object { $_.Name -in $Name }
 }
 
-if ($CopyCrossSubscription) {
-  Write-Information "Target subscription ID: $TargetSubscriptionId"
+if ($TargetSubscriptionId -ne $SubscriptionId) {
   $Context = Set-AzContext -SubscriptionId $TargetSubscriptionId
-  $TargetSubscriptionName = $Context.Subscription.Name
-  Write-Information "Target subscription name: $TargetSubscriptionName"
 }
+$TargetSubscriptionName = $Context.Subscription.Name
+Write-Information "Target subscription: $TargetSubscriptionName ($TargetSubscriptionId)"
 
 $TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
+if ($null -eq $TargetVault) {
+  Write-Host "Target Key Vault '$TargetVaultName' does not exist in target subscription '$TargetSubscriptionName'"
+  exit 1
+}
+
 $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
 try {
   if ($AddNetworkRule) {
