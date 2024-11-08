@@ -74,7 +74,7 @@ $VaultArguments = @{
 
 Write-Information "Target vault name: $TargetVaultName"
 $TargetVaultArguments = @{
-  $VaultName = $TargetVaultName
+  VaultName = $TargetVaultName
 }
 
 if ($PSCmdlet.ParameterSetName -eq "CrossSubscription") {
@@ -134,7 +134,7 @@ try {
     if ($null -eq $TargetSecret -or $Force) {
       Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
       $TargetExpires = $Secret.Expires
-      $TargetSecretValue = $Secret.Value
+      $TargetSecretValue = $Secret.SecretValue
       $TargetSecret = $TargetVault | Set-AzKeyVaultSecret -Name $TargetName -Expires $TargetExpires -SecretValue $TargetSecretValue
     }
     else {
