@@ -135,6 +135,7 @@ try {
       Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
       $TargetExpires = $Secret.Expires
       $TargetSecretValue = $Secret.SecretValue
+      # TODO(@hknutsen): this is broken...
       $TargetSecret = $TargetVault | Set-AzKeyVaultSecret -Name $TargetName -Expires $TargetExpires -SecretValue $TargetSecretValue
     }
     else {
