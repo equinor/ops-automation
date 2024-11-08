@@ -92,13 +92,13 @@ $Secrets = @()
 try {
   if ($AddNetworkRule) {
     Write-Information "Adding IP address range '$IpAddressRange' to Key Vault '$VaultName'"
-    $null = $Vault | Add-AzKeyVaultNetworkRule -IpAddressRange $IpAddressRange
+    $null = Add-AzKeyVaultNetworkRule -VaultName $VaultName -IpAddressRange $IpAddressRange
   }
 
   Write-Information "Getting secrets from Key Vault '$VaultName'"
   # Using Get-AzKeyVaultSecret to get all secrets does not return secret values.
   # Use Get-AzKeyVaultSecret to get all secret names, then use Get-AzKeyVaultSecret to get secret value for each secret name.
-  ($Vault | Get-AzKeyVaultSecret).Name | ForEach-Object { $Secrets += $Vault | Get-AzKeyVaultSecret -Name $_ }
+  (Get-AzKeyVaultSecret -VaultName $VaultName).Name | ForEach-Object { $Secrets += Get-AzKeyVaultSecret -VaultName $VaultName -Name $_ }
 }
 catch {
   Write-Host "An error occurred:"
@@ -107,7 +107,7 @@ catch {
 finally {
   if ($AddNetworkRule) {
     Write-Information "Removing IP address range '$IpAddressRange' from Key Vault '$VaultName'"
-    $null = $Vault | Remove-AzKeyVaultNetworkRule -IpAddressRange $IpAddressRange
+    $null = Remove-AzKeyVaultNetworkRule -VaultName $VaultName -IpAddressRange $IpAddressRange
   }
 }
 
@@ -131,12 +131,12 @@ $AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddre
 try {
   if ($AddNetworkRule) {
     Write-Information "Adding IP address range '$IpAddressRange' to target Key Vault '$TargetVaultName'"
-    $null = $TargetVault | Add-AzKeyVaultNetworkRule -IpAddressRange $IpAddressRange
+    $null = Add-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
   }
 
   foreach ($Secret in $Secrets) {
     $TargetName = $Secret.Name
-    $TargetSecret = $TargetVault | Get-AzKeyVaultSecret -Name $TargetName
+    $TargetSecret = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetName
 
     if ($null -eq $TargetSecret -or $Force) {
       Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
@@ -156,6 +156,6 @@ catch {
 finally {
   if ($AddNetworkRule) {
     Write-Information "Removing IP address range '$IpAddressRange' from target Key Vault '$TargetVaultName'"
-    $null = $TargetVault | Remove-AzKeyVaultNetworkRule -IpAddressRange $IpAddressRange
+    $null = Remove-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
   }
 }
