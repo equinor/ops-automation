@@ -3,7 +3,7 @@
 If you discover a security vulnerability in this project, please follow these steps to responsibly disclose it:
 
 1. **Do not** create a public GitHub issue for the vulnerability
-1. Follow our guideline for Responsible Disclosure Policy at https://www.equinor.com/about-us/csirt to report the issue
+1. Follow our guideline for Responsible Disclosure Policy at <https://www.equinor.com/about-us/csirt> to report the issue
 
 The following information will help us triage your report more quickly:
 
