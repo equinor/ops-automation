@@ -12,6 +12,7 @@
 !README.md
 !CODEOWNERS
 !SECURITY.md
+!CONTRIBUTING.md
 
 # Whitelist maps
 !.github/*/*
