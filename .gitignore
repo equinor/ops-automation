@@ -11,6 +11,7 @@
 !.gitignore
 !README.md
 !CODEOWNERS
+!SECURITY.md
 
 # Whitelist maps
 !.github/*/*
