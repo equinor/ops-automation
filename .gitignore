@@ -19,6 +19,7 @@
 !modules/powershell/*
 !scripts/bash/*/*
 !scripts/powershell/*
+!scripts/powershell/modules/*
 
 # Ignore names
 *test*
