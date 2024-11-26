@@ -1,228 +1,161 @@
 <#
   .SYNOPSIS
-  Copies key vault secrets to a target key vault.
+  Copies Key Vault secrets to a target Key Vault.
 
-  Prerequisites for identity or service principal that will run this script:
-    - RBAC as Key Vault Contributor for Source and Destination Vault
-    - Read access policy for secrets at source Key Vault and Write access policy for secrets at destination Key Vault
+  .DESCRIPTION
+  The Copy-AzKeyVaultSecret.ps1 script wraps the Get-AzKeyVaultSecret and Set-AzKeyVaultSecret cmdlets to simplify the process of copying Key Vault secrets to a target Key Vault.
+  It will automatically check for and skip existing secrets in the target Key Vault.
 
-  .PARAMETER SourceVaultName
-  Specifies the name of the source key vault.
+  Prerequisites:
+    - Azure roles "Key Vault Contributor" and "Key Vault Secrets User" at the Key Vault scope.
+    - Azure roles "Key Vault Contributor" and "Key Vault Secrets Officer" at the target Key Vault scope.
+
+  .PARAMETER VaultName
+  The name of the Key Vault to copy secrets from.
 
   .PARAMETER TargetVaultName
-  Specifies the name of the target key vault.
+  The name of the target Key Vault to copy secrets to.
 
   .PARAMETER SubscriptionId
-  Specifies the ID of source Azure Subscription.
+  The ID of the subscription to copy Key Vault secrets from.
+  If not specified, the ID of the subscription that has been set for the current Azure PowerShell context will be used.
 
   .PARAMETER TargetSubscriptionId
-  Specifies the ID of target Azure Subscription.
+  The ID of the subscription to copy Key Vault secrets to.
+  If not specified, the ID of the subscription to copy Key Vault secrets from will be used.
 
-  .PARAMETER SecretName
-  Specifies the name of the secret to copy. You can as well specify multiple SecretNames for multiple secrets to copy.
-
-  .PARAMETER SkipSecrets
-  Specifies the names of the secrets to skip during copy operation.
+  .PARAMETER Name
+  The name of the Key Vault secrets to copy.
+  If not specified, all secrets will be copied.
 
   .PARAMETER Force
-  Forces the script to run without asking for user confirmation.
-
-  .PARAMETER Runbook
-  Trigger script function to login using runbook managed identity.
+  Override existing secrets in target Key Vault.
 
   .EXAMPLE
-  This example shows how to copy all secrets from source to target vault.
-  It requires manual user confirmation before executing copy operation for every secret separately:
-  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String>
+  .\Copy-AzKeyVaultSecret.ps1 -VaultName example-vault -TargetVaultName example-vault-02
 
   .EXAMPLE
-  Similar to example above, this shows how to copy all secrets from source to target vault.
-  But this time the script does not require user confirmation as it uses -Force argument.
-  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String> -Force
+  .\Copy-AzKeyVaultSecret.ps1 -VaultName example-vault -TargetVaultName example-vault-02 -Name storage--primary-connection-string, storage--secondary-connection-string
 
   .EXAMPLE
-  This example shows how to use $SecretName Parameter to copy a single secret:
-  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String> -SecretName <String>
+  .\Copy-AzKeyVaultSecret.ps1 -VaultName example-vault -TargetVaultName example-vault-02 -Force
 
   .EXAMPLE
-  This example shows how to use $SecretName Parameter to copy multiple secrets:
-  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String> -SecretName <String>, <String>, <String>
-
-  .EXAMPLE
-  This example shows how to copy all secrets without confirmation when vaults reside in different Azure Subscriptions:
-  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String> -TargetSubscriptionId <String> -Force
-
-  .EXAMPLE
-  This example shows the same example as previous + use of SkipSecrets Parameter. SkipSecrets supports multiple values:
-  .\Copy-AzKeyVaultSecret.ps1 -SourceVaultName <String> -TargetVaultName <String> -SubscriptionId <String> -TargetSubscriptionId <String> -Force -SkipSecrets <String>, <String>, <String>
+  .\Copy-AzKeyVaultSecret.ps1 -VaultName example-vault -TargetVaultName example-vault-02 -SubscriptionId a8aa6166-3ab2-463c-b9d2-b3b277a2b70a -TargetSubscriptionId f8785e9b-2e41-4ffa-b693-33808fb24d3e
 #>
 
 param (
-    [Parameter(Mandatory = $true)]
-    [string]$SourceVaultName,
+  [Parameter(Mandatory = $true)]
+  [string]$VaultName,
 
-    [Parameter(Mandatory = $true)]
-    [string]$TargetVaultName,
+  [Parameter(Mandatory = $true)]
+  [string]$TargetVaultName,
 
-    [Parameter(Mandatory = $true)]
-    [string]$SubscriptionId,
+  [Parameter(Mandatory = $false)]
+  [string]$SubscriptionId,
 
-    [Parameter(Mandatory = $false)]
-    [string]$TargetSubscriptionId,
+  [Parameter(Mandatory = $false)]
+  [string]$TargetSubscriptionId = $SubscriptionId,
 
-    [Parameter(Mandatory = $false)]
-    [string[]]$SecretName,
+  [Parameter(Mandatory = $false)]
+  [string[]]$Name,
 
-    [Parameter(Mandatory = $false)]
-    [string[]]$SkipSecrets,
-
-    [Parameter(Mandatory = $false)]
-    [switch]$Force,
-
-    [Parameter(Mandatory = $false)]
-    [switch]$Runbook
+  [Parameter(Mandatory = $false)]
+  [switch]$Force
 )
 
-$InformationPreference = 'Continue'
+Write-Information "Vault name: $VaultName"
+Write-Information "Target vault name: $TargetVaultName"
+Write-Information "Subscription ID: $SubscriptionId"
+Write-Information "Target subscription ID: $TargetSubscriptionId"
 
-# Log into Azure using a managed identity, for use in an Azure Automation Runbook.
-function aaLogin {
-    Disable-AzContextAutosave -Scope Process
-    $AzureContext = (Connect-AzAccount -Identity).context
-    Set-AzContext -SubscriptionId $SubscriptionId -DefaultProfile $AzureContext
+if ($SubscriptionId -ne "") {
+  Write-Information "Setting subscription to '$subscriptionId' for current context"
+  $null = Set-AzContext -SubscriptionId $SubscriptionId
+}
+else {
+  $SubscriptionId = (Get-AzContext).Subscription.Id
 }
 
-# Set and verify Azure Subscription Context
-function Select-SubscriptionContext {
+$IpAddress = Invoke-RestMethod "https://api.ipify.org"
+Write-Information "IP address: $IpAddress"
 
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$SubscriptionId
-    )
-
-    # Set Context to correct Subscription.
-    Set-AzContext -SubscriptionId $SubscriptionId
-
-    # Verify Subscription Context
-    $subCheck = (Get-AzContext).Subscription.Id
-    try {
-        if ($subCheck -ne $SubscriptionId) {
-            Write-Error "Error: Subscription Mismatch, check context!"
-            exit 1
-        }
-    }
-    catch {
-        Write-Error "Error: $($_.Exception.Message)"
-    }
+$IpAddressRange = "$IpAddress/32"
+$Vault = Get-AzKeyVault -VaultName $VaultName
+if ($null -eq $Vault) {
+  Write-Host "Key Vault '$VaultName' does not exist in subscription '$SubscriptionName'"
+  exit 1
 }
 
-# Temporarily disable Key Vault firewall to allow script to read secrets in Source Vault and write secrets in Target Vault.
-function Disable-KeyVaultFirewall {
-
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$VaultName
-    )
-
-    $Vault = Get-AzKeyVault -VaultName $VaultName -ErrorAction SilentlyContinue
-    $FirewallDefaultAction = $Vault.NetworkAcls.DefaultAction
-    $FirewallEnabled = $FirewallDefaultAction -eq 'Deny'
-
-    if ($FirewallEnabled) {
-        $null = Update-AzKeyVaultNetworkRuleSet -VaultName $VaultName -DefaultAction 'Allow'
-    }
-
-    return $FirewallEnabled
-}
-
+$AddNetworkRule = $Vault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
+$Secrets = @()
 try {
-    if ($Runbook) {
-        aaLogin
-    }
+  if ($AddNetworkRule) {
+    Write-Information "Adding IP address range '$IpAddressRange' to Key Vault '$VaultName'"
+    $null = Add-AzKeyVaultNetworkRule -VaultName $VaultName -IpAddressRange $IpAddressRange
+  }
 
-    # Set Context and make sure FireWall is set to "Allowed" to be able to access secrets
-    Select-SubscriptionContext -SubscriptionId $SubscriptionId
-    $SourceVaultFirewall = Disable-KeyVaultFirewall -VaultName $SourceVaultName
-    $TargetVaultFirewall = Disable-KeyVaultFirewall -VaultName $TargetVaultName
-
-    # Check if Source and Target Vaults exist
-    $SourceVault = Get-AzKeyVault -VaultName $SourceVaultName -ErrorAction SilentlyContinue
-    $TargetVault = Get-AzKeyVault -VaultName $TargetVaultName -ErrorAction SilentlyContinue
-
-    if ($SourceVault -and $TargetVault) {
-        # Skip Secrets from Copy operation if specified in $SkipSecrets Parameter
-        $exclusionList = @()
-        if ($SkipSecrets) {
-            $exclusionList += $SkipSecrets
-        }
-
-        # Run this block if no input in parameter $SecretName specified
-        if (!$SecretName) {
-            if ($SkipSecrets) {
-                $SecretName = (Get-AzKeyVaultSecret -VaultName $SourceVaultName).Name | Where-Object { -not $exclusionList.Contains($_) } | Sort-Object
-            }
-
-            else {
-                $SecretName = (Get-AzKeyVaultSecret -VaultName $SourceVaultName).Name | Sort-Object
-            }
-        }
-
-        foreach ($n in $SecretName) {
-            # Get secret from source Key Vault
-            $SourceSecretValue = Get-AzKeyVaultSecret -VaultName $SourceVaultName -Name $n -AsPlainText -ErrorAction SilentlyContinue
-            $SourceSecret = Get-AzKeyVaultSecret -VaultName $SourceVaultName -Name $n -ErrorAction SilentlyContinue
-
-            # Set Target Subscription Context if available
-            if ($TargetSubscriptionId) {
-                $null = Set-AzContext -SubscriptionId $TargetSubscriptionId
-            }
-
-            # Get target secret from target Key Vault as plaintext for comparison
-            $TargetSecretValue = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $n -AsPlainText -ErrorAction SilentlyContinue
-
-            # Compare Source and Target Secret Values
-            if ($SourceSecretValue -ne $TargetSecretValue) {
-                $SecretValue = $SourceSecretValue | ConvertTo-SecureString -AsPlainText -Force
-                $Copy = Set-AzKeyVaultSecret `
-                    -VaultName $TargetVaultName `
-                    -SecretValue $SecretValue `
-                    -Name $SourceSecret.Name `
-                    -Expires $SourceSecret.Expires `
-                    -ContentType $SourceSecret.ContentType `
-                    -Tag $SourceSecret.Tags `
-                    -Confirm:(!$Force)
-
-                Write-Output "Successfully copied secret name '$($Copy.Name)' with id '$($Copy.Id)'"
-            }
-
-            else {
-                Write-Output "Secret Name '$($SourceSecret.Name)' with id '$($SourceSecret.Id)' already exists in destination vault"
-            }
-        }
-    }
+  Write-Information "Getting secrets from Key Vault '$VaultName'"
+  # Using Get-AzKeyVaultSecret to get all secrets does not return secret values.
+  # Use Get-AzKeyVaultSecret to get all secret names, then use Get-AzKeyVaultSecret to get secret value for each secret name.
+  (Get-AzKeyVaultSecret -VaultName $VaultName).Name | ForEach-Object { $Secrets += Get-AzKeyVaultSecret -VaultName $VaultName -Name $_ }
 }
-
 catch {
-    Write-Error "Error: $($_.Exception.Message)"
+  Write-Host "An error occurred:"
+  Write-Host $_
+}
+finally {
+  if ($AddNetworkRule) {
+    Write-Information "Removing IP address range '$IpAddressRange' from Key Vault '$VaultName'"
+    $null = Remove-AzKeyVaultNetworkRule -VaultName $VaultName -IpAddressRange $IpAddressRange
+  }
 }
 
+if ($Name.Count -gt 0) {
+  Write-Information "Filtering all secrets from Key Vault '$VaultName' to secrets of the specified names"
+  $Secrets = $Secrets | Where-Object { $_.Name -in $Name }
+}
+
+if ($TargetSubscriptionId -ne "" -and $TargetSubscriptionId -ne $SubscriptionId) {
+  Write-Information "Setting subscription to '$TargetSubscriptionId' for current context"
+  $null = Set-AzContext -SubscriptionId $TargetSubscriptionId
+}
+
+$TargetVault = Get-AzKeyVault -VaultName $TargetVaultName
+if ($null -eq $TargetVault) {
+  Write-Host "Target Key Vault '$TargetVaultName' does not exist in target subscription '$TargetSubscriptionName'"
+  exit 1
+}
+
+$AddNetworkRule = $TargetVault.NetworkAcls.IpAddressRanges -notcontains $IpAddressRange
+try {
+  if ($AddNetworkRule) {
+    Write-Information "Adding IP address range '$IpAddressRange' to target Key Vault '$TargetVaultName'"
+    $null = Add-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
+  }
+
+  foreach ($Secret in $Secrets) {
+    $TargetName = $Secret.Name
+    $TargetSecret = Get-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetName
+
+    if ($null -eq $TargetSecret -or $Force) {
+      Write-Information "Setting secret '$TargetName' in target Key Vault '$TargetVaultName'"
+      $TargetExpires = $Secret.Expires
+      $TargetSecretValue = $Secret.SecretValue
+      $TargetSecret = Set-AzKeyVaultSecret -VaultName $TargetVaultName -Name $TargetName -Expires $TargetExpires -SecretValue $TargetSecretValue
+    }
+    else {
+      Write-Information "Secret '$TargetName' already exists in target Key Vault '$TargetVaultName'"
+    }
+  }
+}
+catch {
+  Write-Host "An error occurred:"
+  Write-Host $_
+}
 finally {
-    # Void secrets
-    $SourceSecretValue = ""
-    $TargetSecretValue = ""
-    $SecretValue = ""
-
-    # Switch Source Vault Firewall back to Deny if default action was 'Deny'
-    if ($SourceVaultFirewall) {
-        $null = Update-AzKeyVaultNetworkRuleSet -VaultName $SourceVaultName -DefaultAction 'Deny'
-
-        Write-Output "Firewall for Source Vault is set to $SourceVaultFirewall."
-    }
-
-    # Switch Target Vault Firewall back to Deny if default action was 'Deny'
-    if ($TargetVaultFirewall) {
-        $null = Update-AzKeyVaultNetworkRuleSet -VaultName $TargetVaultName -DefaultAction 'Deny'
-
-        Write-Output "Firewall for Target Vault is set to $SourceVaultFirewall."
-    }
+  if ($AddNetworkRule) {
+    Write-Information "Removing IP address range '$IpAddressRange' from target Key Vault '$TargetVaultName'"
+    $null = Remove-AzKeyVaultNetworkRule -VaultName $TargetVaultName -IpAddressRange $IpAddressRange
+  }
 }
